@@ -1,54 +1,86 @@
 import csv
-import matplotlib.pyplot as plt
-import pandas as pd
+import os
+
+Input_Name = input("Name of Molecule: ")
+directory_path = r'C:\Users\2586376t\Documents-PGR\Research\Properties-of-MPOMs\conda'
+new_folder_name = Input_Name
+new_folder_path = os.path.join(directory_path, new_folder_name)
+os.makedirs(new_folder_path)
 
 input_filename = r'C:\Users\2586376t\Documents-PGR\Research\Properties-of-MPOMs\conda\Test.out'
-output_filename = 'output.csv'
+output_filename = os.path.join(new_folder_path, f'{new_folder_name}_Orbital_Energies_Output.csv')
 
-def Extract_Energy_and_Cycle(input_filename, output_filename):
-    energy_data = []  # Create a list to store the energy values
-    HOMO__Output_data = []  # Create a list to store the energy cycle values
-    LUMO__Output_data = []  # Create a list to store the energy cycle values
+Basic_Info_Output_filename = os.path.join(new_folder_path, f'{new_folder_name}_Basic_Information_Output.csv')
 
+Convergence_filename = os.path.join(new_folder_path, f'{new_folder_name}_Convergance.csv')
+
+def Orbital_Eneries_Exporter(input_filename, output_filename):
+    Orbital_energies_Data = []  # Create a list to store the energy values
 
     with open(input_filename, 'r') as file_object:
-        for line in file_object:
-            if 'Energy (hartree)' in line:
-                energy = float(line[29:39])  # Extract and convert the energy value to float
-                energy_data.append(energy)  # Append the energy value to the list
-            elif ' HOMO :' in line:
-                HOMO_Energy=float(line[35:56])		
-                HOMO__Output_data .append(HOMO_Energy)  # Append the energy value to the list
-            elif ' LUMO :' in line:
-                LUMO_Energy=float(line[35:56])	
-                LUMO__Output_data .append(LUMO_Energy)  # Append the energy value to the list
-
-	
-    combined_data = list(zip(energy_data, HOMO__Output_data, LUMO__Output_data))
+        lines = file_object.readlines()
+        for i, line in enumerate(lines):
+            if ' Scaled ZORA Orbital Energies, per Irrep and Spin:' in line:
+                for next_line in lines[i+5:i+17]:
+                    Energies_Data_New = next_line.split()[:3]
+                    Orbital_energies_Data.append(Energies_Data_New)
 
     # Write the combined data to a CSV file with headers
     with open(output_filename, 'w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
+
+        csv_writer.writerow(['Orbital No', 'Occupation', 'Orbital Energies / H', 'Orbital Energies / eV'])
+        csv_writer.writerows(Orbital_energies_Data)
+
+Orbital_Eneries_Exporter(input_filename, output_filename)
+
+def Basic_Information_Exporter(input_filename, Basic_Info_Output_filename):
+    Output_Energy = []
+    HOMO = []
+    LUMO = []
+    Gap = []
+
+    with open(input_filename, 'r') as file_object:
+        lines = file_object.readlines()
+        for line in lines:
+            if 'Energy (hartree)' in line:
+                energy = float(line[29:39])  # Extract and convert the energy value to float
+                Output_Energy.append(energy)
+
+            elif ' HOMO :' in line:
+                HOMO_Energy = float(line[35:56])   # Extract and convert the energy value to float
+                HOMO.append(HOMO_Energy)
+
+            elif ' LUMO :' in line:
+                LUMO_Energy = float(line[35:56])   # Extract and convert the energy value to float
+                LUMO.append(LUMO_Energy)
         
-        # Write header rows
-        csv_writer.writerow(['Energy / Hartree', 'HOMO_Energy / eV', 'LUMO_Energy / eV'])
-        
-        # Write the combined data
-        csv_writer.writerows(combined_data)
+        for i in range(len(HOMO)):
+            Gap.append(HOMO[i] - LUMO[i])
 
-# Call the function to extract and write the data
-Extract_Energy_and_Cycle(input_filename, output_filename)
+        combined_data = list(zip(Output_Energy, HOMO, LUMO, Gap))
 
-df = pd.read_csv(output_filename)
+    with open(Basic_Info_Output_filename, 'w', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
 
-fig = plt.figure() # Plot HOMO-LUMO Gap
-ax = fig.add_subplot()
-ax.scatter(1, df['HOMO_Energy / eV'], 800, marker="_", color="red", label='HOMO / eV')
-ax.scatter(1, df['LUMO_Energy / eV'], 800, marker="_",  color="black", label='LUMO / eV')
-ax.set_xticks([])
-ax.legend()
-ax.set_ylabel('HOMO-LUMO Gap / eV')
-for index, row in df.iterrows():
-    plt.vlines(x=1, ymin=row['HOMO_Energy / eV'], ymax=row['LUMO_Energy / eV'], colors='black')
+        csv_writer.writerow(['Electronic Energy / eV', 'HOMO /eV', 'LUMO / eV', 'Gap Energy / eV'])
+        csv_writer.writerow(combined_data[0])  # Assuming you want the first values
 
-plt.show()
+Basic_Information_Exporter(input_filename, Basic_Info_Output_filename)
+
+def Convergence(input_filename, Convergence_filename):
+    Energy_Convergence = []
+
+    with open(input_filename, 'r') as file_object:
+        lines = file_object.readlines()
+        for i, line in enumerate(lines):
+            if 'current energy' in line:
+                Energy_Convergence.append(float(line[45:57]))
+
+    with open(Convergence_filename, 'w', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
+
+        csv_writer.writerow(['Electronic Energy / eV'])
+        csv_writer.writerows([[x] for x in Energy_Convergence])
+
+Convergence(input_filename, Convergence_filename)
