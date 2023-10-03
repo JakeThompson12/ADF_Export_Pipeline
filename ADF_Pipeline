@@ -11,8 +11,8 @@ input_filename = r'C:\Users\2586376t\Documents-PGR\Research\Properties-of-MPOMs\
 output_filename = os.path.join(new_folder_path, f'{new_folder_name}_Orbital_Energies_Output.csv')
 
 Basic_Info_Output_filename = os.path.join(new_folder_path, f'{new_folder_name}_Basic_Information_Output.csv')
-
 Convergence_filename = os.path.join(new_folder_path, f'{new_folder_name}_Convergance.csv')
+Charges_filename=os.path.join(new_folder_path, f'{new_folder_name}_Atomic_Charges.csv')
 
 def Orbital_Eneries_Exporter(input_filename, output_filename):
     Orbital_energies_Data = []  # Create a list to store the energy values
@@ -84,3 +84,34 @@ def Convergence(input_filename, Convergence_filename):
         csv_writer.writerows([[x] for x in Energy_Convergence])
 
 Convergence(input_filename, Convergence_filename)
+
+def Atomic_Charges(input_filename, Charges_filename):
+    Charges = []
+    Atoms = []
+
+    with open(input_filename, 'r') as file_object:
+        lines = file_object.readlines()
+        for i, line in enumerate(lines):
+            if '  Index   Atom    Charge' in line:
+                for next_line in lines[i+1:]:
+                    if len(next_line) < 7:
+                        break
+                    Charges_New_Data = next_line.split()[2]
+                    Charges.append(Charges_New_Data)
+                    Atoms_New_Data = next_line.split()[1]
+                    Atoms.append(Atoms_New_Data)
+
+    combined_data = list(zip(Atoms, Charges))
+
+    with open(Charges_filename, 'w', newline='') as csv_file:
+        csv_writer = csv.writer(csv_file)
+
+        csv_writer.writerow(['Atom', 'Atomic Charge / a.u'])
+        csv_writer.writerows(combined_data)
+
+Atomic_Charges(input_filename, Charges_filename)
+
+
+    
+    
+    
