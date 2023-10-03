@@ -1,5 +1,7 @@
 import csv
 import os
+import matplotlib.pyplot as plt
+import pandas as pd
 
 Input_Name = input("Name of Molecule: ")
 directory_path = r'C:\Users\2586376t\Documents-PGR\Research\Properties-of-MPOMs\conda'
@@ -84,6 +86,15 @@ def Convergence(input_filename, Convergence_filename):
         csv_writer.writerows([[x] for x in Energy_Convergence])
 
 Convergence(input_filename, Convergence_filename)
+df=pd.read_csv(Convergence_filename)
+x=list(range(len(df['Electronic Energy / eV'])))
+plt.plot(x, (df['Electronic Energy / eV']*627.5))
+plt.ylabel('Electronic Energy / kcal mol$^{-1}$')
+plt.xlabel('Iteration')
+convergance_figure = os.path.join(new_folder_path, f'{new_folder_name}_Convergance_Figure.png')
+plt.savefig(convergance_figure)
+plt.show()
+
 
 def Atomic_Charges(input_filename, Charges_filename):
     Charges = []
