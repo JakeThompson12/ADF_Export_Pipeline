@@ -1,23 +1,39 @@
+# ETL_Pipeline1.py
+
 import csv
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
-Input_Name = input("Name of Molecule: ")
-directory_path = r'C:\Users\2586376t\Documents-PGR\Research\Properties-of-MPOMs\conda'
-new_folder_name = Input_Name
-new_folder_path = os.path.join(directory_path, new_folder_name)
-os.makedirs(new_folder_path)
+def Molecule(input_name, input_file):
+    directory_path = os.getcwd()  # current directory
+    new_folder_name = input_name
+    new_folder_path = os.path.join(directory_path, new_folder_name)
+    os.makedirs(new_folder_path)
 
-input_filename = r'C:\Users\2586376t\Documents-PGR\Research\Properties-of-MPOMs\conda\Test.out'
-output_filename = os.path.join(new_folder_path, f'{new_folder_name}_Orbital_Energies_Output.csv')
+    input_filename = os.path.join(directory_path, input_file)
+    orbital_energies_output = os.path.join(new_folder_path, f'{new_folder_name}_Orbital_Energies_Output.csv')
+    Basic_Info_Output_filename = os.path.join(new_folder_path, f'{new_folder_name}_Basic_Information_Output.csv')
+    Convergence_filename = os.path.join(new_folder_path, f'{new_folder_name}_Convergence.csv')
+    Charges_filename = os.path.join(new_folder_path, f'{new_folder_name}_Atomic_Charges.csv')
 
-Basic_Info_Output_filename = os.path.join(new_folder_path, f'{new_folder_name}_Basic_Information_Output.csv')
-Convergence_filename = os.path.join(new_folder_path, f'{new_folder_name}_Convergance.csv')
-Charges_filename=os.path.join(new_folder_path, f'{new_folder_name}_Atomic_Charges.csv')
+    Orbital_Eneries_Exporter(input_filename, orbital_energies_output)
+    Basic_Information_Exporter(input_filename, Basic_Info_Output_filename)
+    Convergence(input_filename, Convergence_filename)
+    Atomic_Charges(input_filename, Charges_filename)
 
-def Orbital_Eneries_Exporter(input_filename, output_filename):
-    Orbital_energies_Data = []  # Create a list to store the energy values
+    # Plot and save the convergence figure
+    df = pd.read_csv(Convergence_filename)
+    x = list(range(len(df['Electronic Energy / eV'])))
+    plt.plot(x, (df['Electronic Energy / eV'] * 627.5))
+    plt.ylabel('Electronic Energy / kcal mol$^{-1}$')
+    plt.xlabel('Iteration')
+    convergence_figure = os.path.join(directory_path, f'{input_name}_Convergence_Figure.png')
+    plt.savefig(convergence_figure)
+    plt.show()
+
+def Orbital_Eneries_Exporter(input_filename, orbital_energies_output):
+    Orbital_energies_Data = []
 
     with open(input_filename, 'r') as file_object:
         lines = file_object.readlines()
@@ -27,14 +43,11 @@ def Orbital_Eneries_Exporter(input_filename, output_filename):
                     Energies_Data_New = next_line.split()[:3]
                     Orbital_energies_Data.append(Energies_Data_New)
 
-    # Write the combined data to a CSV file with headers
-    with open(output_filename, 'w', newline='') as csv_file:
+    with open(orbital_energies_output, 'w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
 
         csv_writer.writerow(['Orbital No', 'Occupation', 'Orbital Energies / H', 'Orbital Energies / eV'])
         csv_writer.writerows(Orbital_energies_Data)
-
-Orbital_Eneries_Exporter(input_filename, output_filename)
 
 def Basic_Information_Exporter(input_filename, Basic_Info_Output_filename):
     Output_Energy = []
@@ -46,15 +59,15 @@ def Basic_Information_Exporter(input_filename, Basic_Info_Output_filename):
         lines = file_object.readlines()
         for line in lines:
             if 'Energy (hartree)' in line:
-                energy = float(line[29:39])  # Extract and convert the energy value to float
+                energy = float(line[29:39])
                 Output_Energy.append(energy)
 
             elif ' HOMO :' in line:
-                HOMO_Energy = float(line[35:56])   # Extract and convert the energy value to float
+                HOMO_Energy = float(line[35:56])
                 HOMO.append(HOMO_Energy)
 
             elif ' LUMO :' in line:
-                LUMO_Energy = float(line[35:56])   # Extract and convert the energy value to float
+                LUMO_Energy = float(line[35:56])
                 LUMO.append(LUMO_Energy)
         
         for i in range(len(HOMO)):
@@ -66,9 +79,7 @@ def Basic_Information_Exporter(input_filename, Basic_Info_Output_filename):
         csv_writer = csv.writer(csv_file)
 
         csv_writer.writerow(['Electronic Energy / eV', 'HOMO /eV', 'LUMO / eV', 'Gap Energy / eV'])
-        csv_writer.writerow(combined_data[0])  # Assuming you want the first values
-
-Basic_Information_Exporter(input_filename, Basic_Info_Output_filename)
+        csv_writer.writerow(combined_data[0])
 
 def Convergence(input_filename, Convergence_filename):
     Energy_Convergence = []
@@ -84,17 +95,6 @@ def Convergence(input_filename, Convergence_filename):
 
         csv_writer.writerow(['Electronic Energy / eV'])
         csv_writer.writerows([[x] for x in Energy_Convergence])
-
-Convergence(input_filename, Convergence_filename)
-df=pd.read_csv(Convergence_filename)
-x=list(range(len(df['Electronic Energy / eV'])))
-plt.plot(x, (df['Electronic Energy / eV']*627.5))
-plt.ylabel('Electronic Energy / kcal mol$^{-1}$')
-plt.xlabel('Iteration')
-convergance_figure = os.path.join(new_folder_path, f'{new_folder_name}_Convergance_Figure.png')
-plt.savefig(convergance_figure)
-plt.show()
-
 
 def Atomic_Charges(input_filename, Charges_filename):
     Charges = []
@@ -119,10 +119,3 @@ def Atomic_Charges(input_filename, Charges_filename):
 
         csv_writer.writerow(['Atom', 'Atomic Charge / a.u'])
         csv_writer.writerows(combined_data)
-
-Atomic_Charges(input_filename, Charges_filename)
-
-
-    
-    
-    
