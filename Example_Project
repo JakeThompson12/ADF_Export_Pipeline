@@ -1,0 +1,84 @@
+import ETL_Pipeline_Module as pipe
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+from sklearn import linear_model
+
+# Retrieve files
+PH3_value = 593.8517 
+compounds = ["Li3", "Na3", "Li7", "Na7", "K7", "APW9", "BPW9"]
+labels=["Li$_{3}$", "Na$_{3}$", "Li$_{7}$", "Na$_{7}$", "K$_{7}$", "A-PW$_{9}$", "B-PW$_{9}$"]
+dfs=[]
+
+colors = ['steelblue', 'purple', 'darkseagreen', 'palevioletred', 'grey', 'yellow', 'red']
+
+for compound, color in zip(compounds, colors):
+    pipe.Optimisation(compound, f"{compound}.out")
+    pipe.NMR(compound, f"{compound}.logfile", PH3_value)
+    color_values = color
+
+# Prepare and Clean Data
+directory_path = os.getcwd()  # current directory
+Normalized_csv_path = os.path.join(directory_path, "Normalized_NMR_Data.csv")
+Corrected_NMR_Data = os.path.join(directory_path, "NMR_Data_Corrected.csv")
+
+for compound, color in zip(compounds, colors):
+    csv_path = os.path.join(directory_path, f"{compound}/{compound}_NMR_Output.csv")
+    df = pd.read_csv(csv_path)
+    dfs.append(df)
+    color_values = color
+
+Shielding_Tensor_Values = [df.iloc[0, 0] for df in dfs] 
+Chemical_Shift_Values = [df.iloc[0, 3] for df in dfs]
+
+new_df = pd.DataFrame({'Chemical Shift': Chemical_Shift_Values,
+                        'Shielding_Tensor': Shielding_Tensor_Values,
+                        'Compound': compounds  
+                        })
+
+new_df.to_csv(Normalized_csv_path, index=False) 
+
+df = pd.read_csv(Normalized_csv_path) # now ready for analysis
+
+df['Exp_Chemical_Shift'] = [-15.41, -15.36, -11.65, -10.82, -11.13, -7.76, -3.76]
+for i, compound in enumerate(compounds):
+    plt.scatter(df['Shielding_Tensor'].iloc[i], df['Exp_Chemical_Shift'].iloc[i], label=labels[i], color=colors[i], edgecolor='black')
+
+reg = linear_model.LinearRegression()
+reg.fit(df[['Shielding_Tensor']],  df['Exp_Chemical_Shift'])
+plt.plot(df['Shielding_Tensor'], reg.coef_*df['Shielding_Tensor'] + reg.intercept_, color='Black')
+plt.ylabel("Chemical Shift / ppm")
+plt.xlabel("Shielding Tensor / a.u.")
+
+# Creating a legend
+plt.legend(edgecolor='white')
+
+Corrected_Chemical_Shifts = []
+for i in range(len(df['Shielding_Tensor'])):
+    Corrected_Values = reg.predict([[df['Shielding_Tensor'].iloc[i]]])
+    Corrected_Chemical_Shifts.append(Corrected_Values[0])
+df['Corrected_Chemical_Shifts'] = Corrected_Chemical_Shifts
+
+Percentage_Error_Comp=[]
+Percentage_Error_Corr=[]
+Difference_in_Error=[]
+
+for i in range(len(df['Shielding_Tensor'])):
+    error_comp=((df['Chemical Shift'].iloc[i] - df['Exp_Chemical_Shift'].iloc[i])/ df['Exp_Chemical_Shift'].iloc[i])*100
+    Percentage_Error_Comp.append(error_comp)
+    error_corr=((df['Corrected_Chemical_Shifts'].iloc[i] - df['Exp_Chemical_Shift'].iloc[i])/ df['Exp_Chemical_Shift'].iloc[i])*100
+    Percentage_Error_Corr.append(error_corr)
+
+df['Percentage_Error_Computed / %']=Percentage_Error_Comp
+df['Percentage_Error_Corrected / %']=Percentage_Error_Corr
+
+Difference_in_Error=[]
+
+for i in range(len(df['Percentage_Error_Computed / %'])):
+    Diff = df['Percentage_Error_Computed / %'].iloc[i] - df['Percentage_Error_Corrected / %'].iloc[i]
+    Difference_in_Error.append(Diff)
+
+df['Error Difference / %'] = Difference_in_Error
+
+df.to_csv(Corrected_NMR_Data, index=False)
+plt.show()
