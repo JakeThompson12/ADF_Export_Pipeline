@@ -1,1 +1,6 @@
 #Loading the Module
+
+import ETL_Pipeline_Module as pipe 
+​
+#Extract data from opt. calculations
+pipe.Optimsation("Water", "Test.out") 
